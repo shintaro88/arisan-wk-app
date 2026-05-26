@@ -1,0 +1,56 @@
+name: Build APK from ZIP
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unzip Flutter project
+        run: |
+          unzip -o arisan_wk_app_mvp.zip
+          ls -la
+          ls -la arisan_wk_app
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Prepare Android project
+        working-directory: arisan_wk_app
+        run: flutter create . --platforms=android
+
+      - name: Install dependencies
+        working-directory: arisan_wk_app
+        run: flutter pub get
+
+      - name: Analyze project
+        working-directory: arisan_wk_app
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: Build debug APK
+        working-directory: arisan_wk_app
+        run: flutter build apk --debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arisan-WK-APK
+          path: arisan_wk_app/build/app/outputs/flutter-apk/app-debug.apk
