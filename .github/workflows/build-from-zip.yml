@@ -4,12 +4,15 @@ on:
   push:
     branches:
       - main
+      - master
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Flutter APK
+    name: Build Arisan WK APK
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
@@ -17,30 +20,34 @@ jobs:
 
       - name: Unzip Flutter project
         run: |
+          rm -rf arisan_wk_app
           unzip -o arisan_wk_app_mvp.zip
-          ls -la
           ls -la arisan_wk_app
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
 
       - name: Prepare Android project
         working-directory: arisan_wk_app
-        run: flutter create . --platforms=android
+        run: flutter create . --platforms=android --project-name arisan_wk_app --org com.example
 
       - name: Install dependencies
         working-directory: arisan_wk_app
         run: flutter pub get
 
-      - name: Analyze project
+      - name: Analyze project non-blocking
         working-directory: arisan_wk_app
         run: flutter analyze
         continue-on-error: true
