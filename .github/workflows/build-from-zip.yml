@@ -22,6 +22,7 @@ jobs:
         run: |
           rm -rf arisan_wk_app
           unzip -o arisan_wk_app_mvp.zip
+          ls -la
           ls -la arisan_wk_app
 
       - name: Setup Java
@@ -37,9 +38,10 @@ jobs:
           cache: true
 
       - name: Show Flutter version
+        working-directory: arisan_wk_app
         run: flutter --version
 
-      - name: Prepare Android project
+      - name: Create Android platform files if missing
         working-directory: arisan_wk_app
         run: flutter create . --platforms=android --project-name arisan_wk_app --org com.example
 
