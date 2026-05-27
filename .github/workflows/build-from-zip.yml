@@ -41,9 +41,18 @@ jobs:
         working-directory: arisan_wk_app
         run: flutter --version
 
-      - name: Create Android platform files if missing
+      - name: Create Android platform files
         working-directory: arisan_wk_app
         run: flutter create . --platforms=android --project-name arisan_wk_app --org com.example
+
+      - name: Restore custom Android files
+        working-directory: arisan_wk_app
+        run: |
+          mkdir -p android/app/src/main/kotlin/com/example/arisan_wk_app
+          cp tooling/MainActivity.kt android/app/src/main/kotlin/com/example/arisan_wk_app/MainActivity.kt
+          cp tooling/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          grep -q "readLatestBackupFromDownloads" android/app/src/main/kotlin/com/example/arisan_wk_app/MainActivity.kt
+          grep -q "MANAGE_EXTERNAL_STORAGE" android/app/src/main/AndroidManifest.xml
 
       - name: Install dependencies
         working-directory: arisan_wk_app
@@ -51,7 +60,7 @@ jobs:
 
       - name: Analyze project non-blocking
         working-directory: arisan_wk_app
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
         continue-on-error: true
 
       - name: Build debug APK
