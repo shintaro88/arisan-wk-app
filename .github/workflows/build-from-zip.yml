@@ -13,10 +13,30 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      PROJECT_DIR: arisan_wk_app
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Prepare Flutter project from ZIP
+        run: |
+          set -e
+          if [ -d "$PROJECT_DIR" ]; then
+            echo "Project folder already exists: $PROJECT_DIR"
+          elif [ -f "arisan_wk_app_mvp.zip" ]; then
+            echo "Unzipping arisan_wk_app_mvp.zip..."
+            unzip -o arisan_wk_app_mvp.zip
+          else
+            echo "ERROR: arisan_wk_app_mvp.zip not found and $PROJECT_DIR folder does not exist."
+            ls -la
+            exit 1
+          fi
+          test -d "$PROJECT_DIR"
+          echo "Project contents:"
+          ls -la "$PROJECT_DIR"
+          echo "Tooling contents:"
+          ls -la "$PROJECT_DIR/tooling" || true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -34,27 +54,35 @@ jobs:
         run: flutter --version
 
       - name: Create Android platform files
+        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter create . --platforms=android --project-name arisan_wk_app --org com.example
 
       - name: Restore custom Android MainActivity
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
+          set -e
           mkdir -p android/app/src/main/kotlin/com/example/arisan_wk_app
+          test -f tooling/MainActivity.kt
+          test -f tooling/AndroidManifest.xml
           cp tooling/MainActivity.kt android/app/src/main/kotlin/com/example/arisan_wk_app/MainActivity.kt
           cp tooling/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           grep -q "readLatestBackupFromDownloads" android/app/src/main/kotlin/com/example/arisan_wk_app/MainActivity.kt
 
       - name: Install dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
       - name: Analyze project non-blocking
+        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
         continue-on-error: true
 
       - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter build apk --debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Arisan-WK-APK
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-debug.apk
