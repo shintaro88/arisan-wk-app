@@ -1,4 +1,4 @@
-name: Build Flutter APK
+name: Build Flutter APK from ZIP
 
 on:
   push:
@@ -7,22 +7,46 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
-    name: Build Arisan WK APK
+    name: Build Flutter APK
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Clean old extracted folder
+        run: |
+          rm -rf arisan_wk_app
+
+      - name: Verify ZIP exists
+        run: |
+          test -f arisan_wk_app_mvp.zip
+          ls -lah arisan_wk_app_mvp.zip
+
+      - name: Unzip Flutter project
+        run: |
+          unzip -o arisan_wk_app_mvp.zip
+          ls -la
+          ls -la arisan_wk_app
+          ls -la arisan_wk_app/tooling
+
+      - name: Verify project files
+        run: |
+          test -f arisan_wk_app/pubspec.yaml
+          test -f arisan_wk_app/lib/main.dart
+          test -f arisan_wk_app/tooling/MainActivity.kt
+          test -f arisan_wk_app/tooling/AndroidManifest.xml
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -30,31 +54,30 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Show Flutter version
-        run: flutter --version
-
-      - name: Create Android platform files
-        run: flutter create . --platforms=android --project-name arisan_wk_app --org com.example
-
-      - name: Restore custom Android MainActivity
+      - name: Prepare Android project
+        working-directory: arisan_wk_app
         run: |
+          flutter create . --platforms=android --project-name arisan_wk_app --org com.example
+          rm -rf test
           mkdir -p android/app/src/main/kotlin/com/example/arisan_wk_app
           cp tooling/MainActivity.kt android/app/src/main/kotlin/com/example/arisan_wk_app/MainActivity.kt
           cp tooling/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           grep -q "readLatestBackupFromDownloads" android/app/src/main/kotlin/com/example/arisan_wk_app/MainActivity.kt
 
       - name: Install dependencies
+        working-directory: arisan_wk_app
         run: flutter pub get
 
-      - name: Analyze project non-blocking
+      - name: Analyze project
+        working-directory: arisan_wk_app
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-        continue-on-error: true
 
       - name: Build debug APK
+        working-directory: arisan_wk_app
         run: flutter build apk --debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Arisan-WK-APK
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: arisan_wk_app/build/app/outputs/flutter-apk/app-debug.apk
